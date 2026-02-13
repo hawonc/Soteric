@@ -1,0 +1,7 @@
+/target/
+
+.DS_Store
+
+/soteric.json
+.env
+.env.*
