@@ -1,0 +1,4 @@
+# One file path per line
+# Lines starting with # are ignored
+codex.txt
+claude.txt

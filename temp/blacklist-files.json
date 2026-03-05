@@ -1,0 +1,6 @@
+{
+  "blacklist": [
+    "codex.txt",
+    "claude.txt"
+  ]
+}
