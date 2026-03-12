@@ -1,7 +1,13 @@
 /target/
+/.soteric/
 
 .DS_Store
 
-/soteric.json
 .env
 .env.*
+.direnv/
+.vscode/
+.idea/
+
+*.log
+*.tmp
