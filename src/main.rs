@@ -6,7 +6,7 @@ use soteric::models::ProfileState;
 use soteric::process_scan::DetectedProcess;
 use soteric::process_scan::scan_agent_processes;
 use soteric::profiles::{
-    activate_profile, add_profile, append_profile, current_profile_store_path, delete_profile,
+    activate_profile, deactivate_profile, add_profile, append_profile, current_profile_store_path, delete_profile,
     list_profiles, load_profiles, save_profiles, show_profile,
 };
 
@@ -40,6 +40,10 @@ fn main() -> Result<()> {
         }
         Command::Activate { name } => {
             activate_profile(&name, &mut state)?;
+            save_profiles(&profile_file, &state)?;
+        }
+        Command::Deactivate { name } => {
+            deactivate_profile(&name, &mut state)?;
             save_profiles(&profile_file, &state)?;
         }
         Command::ShowProfile { name } => show_profile(&name, &state)?,

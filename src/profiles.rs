@@ -161,6 +161,16 @@ pub fn activate_profile(name: &str, state: &mut ProfileState) -> Result<()> {
     Ok(())
 }
 
+pub fn deactivate_profile(name: &str, state: &mut ProfileState) -> Result<()> {
+    if !state.profiles.contains_key(name) {
+        return Err(anyhow!("Profile '{name}' not found"));
+    }
+
+    state.active_profile = None;
+    println!("Deactivated profile '{name}'.");
+    Ok(())
+}
+
 pub fn show_profile(name: &str, state: &ProfileState) -> Result<()> {
     let profile = state
         .profiles

@@ -48,6 +48,8 @@ pub enum Command {
     },
     /// Mark a profile as the active profile.
     Activate { name: String },
+    /// Unmark a profile as the active profile.
+    Deactivate { name: String },
     /// Show a single profile with its metadata and tracked files.
     #[command(name = "show-profile")]
     ShowProfile { name: String },
