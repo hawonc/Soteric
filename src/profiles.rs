@@ -200,6 +200,20 @@ pub fn list_profiles(state: &ProfileState) {
     }
 }
 
+pub fn active_profile_files(state: &ProfileState) -> Result<&[String]> {
+    let name = state
+        .active_profile
+        .as_deref()
+        .ok_or_else(|| anyhow::anyhow!("No active profile"))?;
+
+    let profile = state
+        .profiles
+        .get(name)
+        .ok_or_else(|| anyhow::anyhow!("Active profile not found"))?;
+
+    Ok(&profile.files)
+}
+
 fn migrate_profile(name: &str, entry: StoredProfile) -> Profile {
     match entry {
         StoredProfile::Legacy(root) => {

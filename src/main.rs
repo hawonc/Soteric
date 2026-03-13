@@ -1,5 +1,6 @@
 use anyhow::Result;
 use clap::Parser;
+use std::fs;
 
 use soteric::cli::{Cli, Command};
 use soteric::models::ProfileState;
@@ -7,13 +8,16 @@ use soteric::process_scan::DetectedProcess;
 use soteric::process_scan::scan_agent_processes;
 use soteric::profiles::{
     activate_profile, deactivate_profile, add_profile, append_profile, current_profile_store_path, delete_profile,
-    list_profiles, load_profiles, save_profiles, show_profile,
+    list_profiles, load_profiles, save_profiles, show_profile, active_profile_files,
 };
+use soteric::encrypter::Encrypter;
 
 fn main() -> Result<()> {
     let cli = Cli::parse();
     let profile_file = current_profile_store_path()?;
     let mut state: ProfileState = load_profiles(&profile_file)?;
+
+    let secret_key = fs::read_to_string("secret.txt")?;
 
     match cli.command {
         Command::AddProfile {
@@ -76,8 +80,14 @@ fn main() -> Result<()> {
                 print_detected_processes(&processes, false);
             }
         }
-        Command::EncryptNow => println!("[TODO] encrypt-now not implemented yet"),
-        Command::DecryptNow => println!("[TODO] decrypt-now not implemented yet"),
+        Command::EncryptNow => {
+            let files = active_profile_files(&state)?;
+            Encrypter::encrypt(&files, &secret_key)?;
+        }
+        Command::DecryptNow => {
+            let files = active_profile_files(&state)?;
+            Encrypter::decrypt(&files, &secret_key)?;
+        }
         Command::Run => println!("[TODO] run service not implemented yet"),
     }
 
