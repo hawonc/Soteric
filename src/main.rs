@@ -49,6 +49,8 @@ fn main() -> Result<()> {
             }
 
             activate_profile(&name, &mut state)?;
+            let files = active_profile_files(&state)?;
+            Encrypter::encrypt(&files, &secret_key)?;
             save_profiles(&profile_file, &state)?;
         }
         Command::Deactivate { name } => {
@@ -58,7 +60,6 @@ fn main() -> Result<()> {
             }
 
             deactivate_profile(&name, &mut state)?;
-            save_profiles(&profile_file, &state)?;
         }
         Command::ShowProfile { name } => show_profile(&name, &state)?,
         Command::ListProfiles => list_profiles(&state),
@@ -89,6 +90,13 @@ fn main() -> Result<()> {
             } else {
                 print_detected_processes(&processes, false);
             }
+        }
+        Command::SetSecret { secret } => {
+            println!("Setting new secret.");
+            let files = active_profile_files(&state)?;
+            Encrypter::decrypt(&files, &secret_key)?;
+            secret_key = secret;
+            Encrypter::encrypt(&files, &secret_key)?;
         }
         Command::EncryptNow => {
             let files = active_profile_files(&state)?;

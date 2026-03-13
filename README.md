@@ -92,6 +92,12 @@ Show the active profile and current detections together:
 soteric status
 ```
 
+Define the secret for file encryption and decryption:
+
+```bash
+soteric secret *****
+```
+
 Current placeholders:
 
 ```bash

@@ -59,6 +59,8 @@ pub enum Command {
     Scan,
     /// Show the active profile and current AI-tool detections.
     Status,
+    // Allows the user to set the secret instead of pulling from the file 'secrets.txt'
+    SetSecret { secret: String },
     /// Placeholder for one-shot encryption of the active profile.
     EncryptNow,
     /// Placeholder for one-shot decryption of the active profile.
