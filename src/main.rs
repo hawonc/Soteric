@@ -43,10 +43,20 @@ fn main() -> Result<()> {
             }
         }
         Command::Activate { name } => {
+            if state.active_profile.is_some() {
+                let files = active_profile_files(&state)?;
+                Encrypter::decrypt(&files, &secret_key)?;
+            }
+
             activate_profile(&name, &mut state)?;
             save_profiles(&profile_file, &state)?;
         }
         Command::Deactivate { name } => {
+            if state.active_profile.is_some() {
+                let files = active_profile_files(&state)?;
+                Encrypter::decrypt(&files, &secret_key)?;
+            }
+
             deactivate_profile(&name, &mut state)?;
             save_profiles(&profile_file, &state)?;
         }
