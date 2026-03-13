@@ -68,6 +68,12 @@ Activate the profile you want to use:
 soteric activate hidden-files
 ```
 
+Deactivate a specific profile:
+
+```bash
+soteric deactivate hidden-files
+```
+
 Delete a profile:
 
 ```bash
