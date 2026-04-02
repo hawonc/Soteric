@@ -31,35 +31,55 @@ export function useAppState() {
   }, [loadProfiles]);
 
   async function activateProfile(name: string) {
-    await invoke("activate_profile", { name });
-    await loadProfiles();
-    addActivity(`Profile activated: ${name}`);
+    try {
+      await invoke("activate_profile", { name });
+      await loadProfiles();
+      addActivity(`Profile activated: ${name}`);
+    } catch (e) {
+      console.error("Failed to activate profile:", e);
+      addActivity(`Error: failed to activate ${name}`);
+    }
   }
 
   async function deactivateProfile(name: string) {
-    await invoke("deactivate_profile", { name });
-    await loadProfiles();
-    addActivity(`Profile deactivated: ${name}`);
+    try {
+      await invoke("deactivate_profile", { name });
+      await loadProfiles();
+      addActivity(`Profile deactivated: ${name}`);
+    } catch (e) {
+      console.error("Failed to deactivate profile:", e);
+      addActivity(`Error: failed to deactivate ${name}`);
+    }
   }
 
   async function deleteProfile(name: string) {
-    await invoke("delete_profile", { name });
-    await loadProfiles();
-    addActivity(`Profile deleted: ${name}`);
+    try {
+      await invoke("delete_profile", { name });
+      await loadProfiles();
+      addActivity(`Profile deleted: ${name}`);
+    } catch (e) {
+      console.error("Failed to delete profile:", e);
+      addActivity(`Error: failed to delete ${name}`);
+    }
   }
 
   async function runScan() {
-    const result = await invoke<DetectedProcess[]>("scan_processes");
-    setProcesses(result);
-    const now = new Date();
-    const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
-    setLastScan(time);
-    if (result.length > 0) {
-      addActivity(
-        `Scan completed — ${result.length} AI tool(s) detected: ${result.map((p) => p.name).join(", ")}`
-      );
-    } else {
-      addActivity("Scan completed — no AI tools detected");
+    try {
+      const result = await invoke<DetectedProcess[]>("scan_processes");
+      setProcesses(result);
+      const now = new Date();
+      const time = `${now.getHours()}:${String(now.getMinutes()).padStart(2, "0")}`;
+      setLastScan(time);
+      if (result.length > 0) {
+        addActivity(
+          `Scan completed — ${result.length} AI tool(s) detected: ${result.map((p) => p.name).join(", ")}`
+        );
+      } else {
+        addActivity("Scan completed — no AI tools detected");
+      }
+    } catch (e) {
+      console.error("Failed to scan:", e);
+      addActivity("Error: scan failed");
     }
   }
 

@@ -4,8 +4,12 @@ use soteric::process_scan::scan_agent_processes;
 use std::path::PathBuf;
 
 fn global_profile_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
-    PathBuf::from(home).join(".soteric").join("profiles.json")
+    if let Some(data) = dirs::data_dir() {
+        data.join("soteric").join("profiles.json")
+    } else {
+        let home = std::env::var("HOME").unwrap_or_else(|_| ".".to_string());
+        PathBuf::from(home).join(".soteric").join("profiles.json")
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]

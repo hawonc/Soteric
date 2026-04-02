@@ -9,6 +9,8 @@ interface Props {
 }
 
 function eventColor(event: string) {
+  if (event.startsWith("Error:")) return "text-destructive";
+  if (event.includes("no AI tools detected")) return "text-emerald-600 dark:text-emerald-400";
   if (event.includes("detected") || event.includes("encrypted")) return "text-destructive";
   if (event.includes("activated") || event.includes("completed")) return "text-emerald-600 dark:text-emerald-400";
   return "text-foreground";

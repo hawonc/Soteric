@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Shield, FileText, Trash2, CheckCircle2, Circle } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,12 @@ interface Props {
 export default function Profiles({ profiles, onActivate, onDeactivate, onDelete }: Props) {
   const [selected, setSelected] = useState<string>(profiles[0]?.name ?? "");
   const selectedProfile = profiles.find((p) => p.name === selected) ?? null;
+
+  useEffect(() => {
+    if (selected === "" || !profiles.some((p) => p.name === selected)) {
+      setSelected(profiles[0]?.name ?? "");
+    }
+  }, [profiles, selected]);
 
   return (
     <div className="p-6 space-y-4">
