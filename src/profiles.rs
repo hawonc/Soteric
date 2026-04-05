@@ -48,10 +48,13 @@ pub fn load_profiles(profile_file: &Path) -> Result<ProfileState> {
         .filter(|(_, profile_name)| profiles.contains_key(profile_name))
         .collect();
 
+    let active_process = parsed.active_process;
+
     Ok(ProfileState {
         profiles,
         active_profile,
         process_to_profile,
+        active_process,
     })
 }
 
@@ -69,6 +72,7 @@ pub fn save_profiles(profile_file: &Path, state: &ProfileState) -> Result<()> {
         profiles,
         active_profile: state.active_profile.clone(),
         process_to_profile: state.process_to_profile.clone().into_iter().collect(),
+        active_process: state.active_process.clone(),
     })?;
 
     let mut file = File::create(profile_file)?;

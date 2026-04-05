@@ -10,6 +10,7 @@ pub struct ProfileState {
     pub profiles: Profiles,
     pub active_profile: Option<String>,
     pub process_to_profile: HashMap<String, String>,
+    pub active_process : Option<String>,
 }
 
 impl ProfileState {
@@ -18,6 +19,7 @@ impl ProfileState {
             profiles: HashMap::new(),
             active_profile: None,
             process_to_profile : HashMap::new(),
+            active_process : None,
         }
     }
 }
@@ -48,4 +50,6 @@ pub struct ProfileStore {
     pub active_profile: Option<String>,
     #[serde(default)]
     pub process_to_profile: BTreeMap<String, String>,
+    #[serde(default)]
+    pub active_process: Option<String>,
 }
