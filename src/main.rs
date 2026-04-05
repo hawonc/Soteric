@@ -59,12 +59,7 @@ fn main() -> Result<()> {
             activate_and_encrypt_profile(&name, &mut state, &secret_key, &profile_file)?;
         }
         Command::Deactivate { name } => {
-            if state.active_profile.is_some() {
-                let files = active_profile_files(&state)?;
-                Encrypter::decrypt(&files, &secret_key)?;
-            }
-
-            deactivate_profile(&name, &mut state)?;
+            deactivate_and_decrypt_profile(&name, &mut state, &secret_key, &profile_file)?;
         }
         Command::ShowProfile { name } => show_profile(&name, &state)?,
         Command::ListProfiles => list_profiles(&state),
@@ -154,6 +149,23 @@ fn activate_and_encrypt_profile(
     let files = active_profile_files(&state)?;
     Encrypter::encrypt(&files, &secret_key)?;
     save_profiles(&profile_file, &state)?;
+    
+    Ok(())
+}
+
+fn deactivate_and_decrypt_profile(
+    name: &str, 
+    state: &mut ProfileState,
+    secret_key: &str,
+    profile_file: &Path) -> Result<()>
+{
+    if state.active_profile.as_deref() == Some(name) {
+        let files = active_profile_files(&state)?;
+        Encrypter::decrypt(&files, &secret_key)?;
+
+        deactivate_profile(&name, state)?;
+        save_profiles(&profile_file, &state)?;
+    }
     
     Ok(())
 }
