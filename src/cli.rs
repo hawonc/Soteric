@@ -61,10 +61,5 @@ pub enum Command {
     Status,
     // Allows the user to set the secret instead of pulling from the file 'secrets.txt'
     SetSecret { secret: String },
-    /// Placeholder for one-shot encryption of the active profile.
-    EncryptNow,
-    /// Placeholder for one-shot decryption of the active profile.
-    DecryptNow,
-    /// Placeholder for a long-running watcher service.
     Run,
 }

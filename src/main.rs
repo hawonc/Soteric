@@ -98,14 +98,6 @@ fn main() -> Result<()> {
             secret_key = secret;
             Encrypter::encrypt(&files, &secret_key)?;
         }
-        Command::EncryptNow => {
-            let files = active_profile_files(&state)?;
-            Encrypter::encrypt(&files, &secret_key)?;
-        }
-        Command::DecryptNow => {
-            let files = active_profile_files(&state)?;
-            Encrypter::decrypt(&files, &secret_key)?;
-        }
         Command::Run => println!("[TODO] run service not implemented yet"),
     }
 
