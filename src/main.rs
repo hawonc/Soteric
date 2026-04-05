@@ -17,7 +17,7 @@ fn main() -> Result<()> {
     let profile_file = current_profile_store_path()?;
     let mut state: ProfileState = load_profiles(&profile_file)?;
 
-    let secret_key = fs::read_to_string("secret.txt")?;
+    let mut secret_key = fs::read_to_string("secret.txt")?;
 
     match cli.command {
         Command::AddProfile {
