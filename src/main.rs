@@ -1,6 +1,7 @@
 use anyhow::Result;
 use clap::Parser;
 use std::fs;
+use std::path::{Path};
 
 use soteric::cli::{Cli, Command};
 use soteric::models::ProfileState;
@@ -28,9 +29,11 @@ fn main() -> Result<()> {
         } => {
             add_profile(&name, file, glob, &mut state)?;
             if activate {
-                activate_profile(&name, &mut state)?;
+                activate_and_encrypt_profile(&name, &mut state, &secret_key, &profile_file)?;
             }
-            save_profiles(&profile_file, &state)?;
+            else {
+                save_profiles(&profile_file, &state)?;
+            }
         }
         Command::AppendProfile { name, file, glob } => {
             append_profile(&name, file, glob, &mut state)?;
@@ -43,15 +46,7 @@ fn main() -> Result<()> {
             }
         }
         Command::Activate { name } => {
-            if state.active_profile.is_some() {
-                let files = active_profile_files(&state)?;
-                Encrypter::decrypt(&files, &secret_key)?;
-            }
-
-            activate_profile(&name, &mut state)?;
-            let files = active_profile_files(&state)?;
-            Encrypter::encrypt(&files, &secret_key)?;
-            save_profiles(&profile_file, &state)?;
+            activate_and_encrypt_profile(&name, &mut state, &secret_key, &profile_file)?;
         }
         Command::Deactivate { name } => {
             if state.active_profile.is_some() {
@@ -101,6 +96,25 @@ fn main() -> Result<()> {
         Command::Run => println!("[TODO] run service not implemented yet"),
     }
 
+    Ok(())
+}
+
+fn activate_and_encrypt_profile(
+    name: &str, 
+    state: &mut ProfileState,
+    secret_key: &str,
+    profile_file: &Path) -> Result<()> 
+{
+    if state.active_profile.is_some() {
+        let files = active_profile_files(&state)?;
+        Encrypter::decrypt(&files, &secret_key)?;
+    }
+
+    activate_profile(&name, state)?;
+    let files = active_profile_files(&state)?;
+    Encrypter::encrypt(&files, &secret_key)?;
+    save_profiles(&profile_file, &state)?;
+    
     Ok(())
 }
 
