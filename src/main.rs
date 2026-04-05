@@ -36,13 +36,23 @@ fn main() -> Result<()> {
             }
         }
         Command::AppendProfile { name, file, glob } => {
-            append_profile(&name, file, glob, &mut state)?;
-            save_profiles(&profile_file, &state)?;
+            if state.active_profile.as_deref() == Some(&name) {
+                println!("Cannot append to an active profile. Please deactivate it first.");
+            }
+            else {
+                append_profile(&name, file, glob, &mut state)?;
+                save_profiles(&profile_file, &state)?;
+            }
         }
         Command::DeleteProfile { name, yes } => {
-            let removed = delete_profile(&name, yes, &mut state)?;
-            if removed {
-                save_profiles(&profile_file, &state)?;
+            if state.active_profile.as_deref() == Some(&name) {
+                println!("Cannot delete an active profile. Please deactivate it first.");
+            }
+            else {
+                let removed = delete_profile(&name, yes, &mut state)?;
+                if removed {
+                    save_profiles(&profile_file, &state)?;
+                }
             }
         }
         Command::Activate { name } => {
