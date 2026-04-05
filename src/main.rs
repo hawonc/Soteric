@@ -2,6 +2,8 @@ use anyhow::Result;
 use clap::Parser;
 use std::fs;
 use std::path::{Path};
+use std::sync::mpsc;
+use std::thread;
 
 use soteric::cli::{Cli, Command};
 use soteric::models::ProfileState;
@@ -129,8 +131,30 @@ fn main() -> Result<()> {
             }
         },
         Command::Run => {
+            let (tx, rx) = mpsc::channel();
+
+            thread::spawn(move || {
+                let mut input = String::new();
+                loop {
+                    input.clear();
+                    if std::io::stdin().read_line(&mut input).is_ok() {
+                        if input.trim() == "q" {
+                            let _ = tx.send(());
+                            break;
+                        }
+                    }
+                }
+            });
+            
+            println!("Entering monitoring mode. Press 'q' and Enter to exit.");
+
             loop {
                 std::thread::sleep(std::time::Duration::from_secs(5));
+                
+                if rx.try_recv().is_ok() {
+                    println!("Exiting monitoring mode.");
+                    break;
+                }
 
                 let processes = scan_agent_processes()?;
 
@@ -141,6 +165,10 @@ fn main() -> Result<()> {
                         temp_new_process = Some(process.name.clone());
                         break;
                     }
+                }
+
+                if temp_new_process.as_ref() == state.active_process.as_ref() {
+                    continue;
                 }
 
                 if temp_new_process.is_none() && state.active_process.is_none() {
@@ -157,8 +185,7 @@ fn main() -> Result<()> {
                     state.active_process = None;
                     deactivate_and_decrypt_profile(&current_profile_name, &mut state, &secret_key, &profile_file)?;
                     println!(
-                        "Deactivated profile '{}' for process '{}'",
-                        current_profile_name,
+                        "\t=> for process '{}'",
                         current_process_name
                     );
                 }
@@ -173,8 +200,7 @@ fn main() -> Result<()> {
                     state.active_process = Some(new_process_name.clone());
                     activate_and_encrypt_profile(&new_profile_name, &mut state, &secret_key, &profile_file)?;
                     println!(
-                        "Activated profile '{}' for process '{}'",
-                        new_profile_name,
+                        "\t=> for process '{}'",
                         new_process_name
                     );
                 }
