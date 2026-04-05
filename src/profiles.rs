@@ -42,9 +42,16 @@ pub fn load_profiles(profile_file: &Path) -> Result<ProfileState> {
         .active_profile
         .filter(|name| profiles.contains_key(name));
 
+    let process_to_profile: std::collections::HashMap<_, _> = parsed
+        .process_to_profile
+        .into_iter()
+        .filter(|(_, profile_name)| profiles.contains_key(profile_name))
+        .collect();
+
     Ok(ProfileState {
         profiles,
         active_profile,
+        process_to_profile,
     })
 }
 
@@ -61,6 +68,7 @@ pub fn save_profiles(profile_file: &Path, state: &ProfileState) -> Result<()> {
     let payload = serde_json::to_string_pretty(&ProfileStore {
         profiles,
         active_profile: state.active_profile.clone(),
+        process_to_profile: state.process_to_profile.clone().into_iter().collect(),
     })?;
 
     let mut file = File::create(profile_file)?;

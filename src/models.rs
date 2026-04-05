@@ -9,6 +9,7 @@ pub type Profiles = HashMap<String, Profile>;
 pub struct ProfileState {
     pub profiles: Profiles,
     pub active_profile: Option<String>,
+    pub process_to_profile: HashMap<String, String>,
 }
 
 impl ProfileState {
@@ -16,6 +17,7 @@ impl ProfileState {
         Self {
             profiles: HashMap::new(),
             active_profile: None,
+            process_to_profile : HashMap::new(),
         }
     }
 }
@@ -44,4 +46,6 @@ pub struct ProfileStore {
     pub profiles: BTreeMap<String, StoredProfile>,
     #[serde(default)]
     pub active_profile: Option<String>,
+    #[serde(default)]
+    pub process_to_profile: BTreeMap<String, String>,
 }

@@ -61,5 +61,18 @@ pub enum Command {
     Status,
     // Allows the user to set the secret instead of pulling from the file 'secrets.txt'
     SetSecret { secret: String },
+    /// Allows the user to set a mapping from a process name to a profile, so that when that process is detected, the corresponding profile is automatically activated.
+    SetMapping {
+        #[arg(long)]
+        process: String,
+        #[arg(long)]
+        profile: String,
+    },
+    /// Allows the user to delete an existing process-to-profile mapping.
+    DeleteMapping {
+        process: String,
+    },
+    /// List the current process-to-profile mappings.
+    ListMappings,
     Run,
 }

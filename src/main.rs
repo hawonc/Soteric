@@ -103,6 +103,36 @@ fn main() -> Result<()> {
             secret_key = secret;
             Encrypter::encrypt(&files, &secret_key)?;
         }
+        Command::SetMapping { process, profile } => {
+            if !state.profiles.contains_key(&profile) {
+                println!("Profile '{}' does not exist. Cannot set mapping.", profile);
+            }
+            else {
+                state.process_to_profile.insert(process.clone(), profile.clone());
+                save_profiles(&profile_file, &state)?;
+                println!("Set mapping: process '{}' -> profile '{}'", process, profile);
+            }
+        },
+        Command::DeleteMapping { process } => {
+            if state.process_to_profile.remove(&process).is_some() {
+                save_profiles(&profile_file, &state)?;
+                println!("Deleted mapping for process '{}'", process);
+            }
+            else {
+                println!("No mapping found for process '{}'", process);
+            }
+        },
+        Command::ListMappings => {
+            if state.process_to_profile.is_empty() {
+                println!("No process-to-profile mappings configured.");
+            }
+            else {
+                println!("Current process-to-profile mappings:");
+                for (process, profile) in &state.process_to_profile {
+                    println!("  process '{}' -> profile '{}'", process, profile);
+                }
+            }
+        },
         Command::Run => println!("[TODO] run service not implemented yet"),
     }
 
