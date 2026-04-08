@@ -10,3 +10,5 @@ glob = "0.3"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 argon2 = "0.6.0-rc.8"
+aes-gcm = "0.11.0-rc.3"
+getrandom = "0.4.2"
