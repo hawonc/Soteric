@@ -74,5 +74,11 @@ pub enum Command {
     },
     /// List the current process-to-profile mappings.
     ListMappings,
+    /// Set up biometric (Touch ID) authentication for the encryption key (macOS only).
+    #[command(name = "setup-biometric")]
+    SetupBiometric,
+    /// Remove biometric authentication (macOS only).
+    #[command(name = "remove-biometric")]
+    RemoveBiometric,
     Run,
 }

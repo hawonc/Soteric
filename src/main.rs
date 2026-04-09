@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use std::fs;
 use std::path::{Path};
@@ -20,7 +20,7 @@ fn main() -> Result<()> {
     let profile_file = current_profile_store_path()?;
     let mut state: ProfileState = load_profiles(&profile_file)?;
 
-    let mut secret_key = fs::read_to_string("secret.txt")?;
+    let mut secret_key = get_secret_key()?;
 
     match cli.command {
         Command::AddProfile {
@@ -128,6 +128,29 @@ fn main() -> Result<()> {
                 for (process, profile) in &state.process_to_profile {
                     println!("  process '{}' -> profile '{}'", process, profile);
                 }
+            }
+        },
+        Command::SetupBiometric => {
+            #[cfg(target_os = "macos")]
+            {
+                soteric::biometrics::store_biometric_secret(&secret_key)?;
+                println!("Biometric authentication set up successfully.");
+                println!("Touch ID will now be used to unlock your encryption key.");
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                println!("Biometric authentication is only supported on macOS.");
+            }
+        },
+        Command::RemoveBiometric => {
+            #[cfg(target_os = "macos")]
+            {
+                soteric::biometrics::delete_biometric_secret()?;
+                println!("Biometric authentication removed.");
+            }
+            #[cfg(not(target_os = "macos"))]
+            {
+                println!("Biometric authentication is only supported on macOS.");
             }
         },
         Command::Run => {
@@ -259,4 +282,16 @@ fn print_detected_processes(processes: &[DetectedProcess], include_heading: bool
     for process in processes {
         println!("[{}] {} - {}", process.pid, process.name, process.command);
     }
+}
+
+fn get_secret_key() -> Result<String> {
+    #[cfg(target_os = "macos")]
+    {
+        match soteric::biometrics::retrieve_biometric_secret() {
+            Ok(secret) => return Ok(secret),
+            Err(_) => {}
+        }
+    }
+    fs::read_to_string("secret.txt").map(|s| s.trim().to_string())
+        .context("Failed to read secret.txt. Set up biometric auth with 'setup-biometric' or create secret.txt.")
 }
