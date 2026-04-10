@@ -80,7 +80,11 @@ export default function App() {
             processes={state.processes}
             activity={state.activity}
             lastScan={state.lastScan}
+            secret={state.secret}
+            onSecretChange={state.setSecret}
             onScan={state.runScan}
+            onEncrypt={state.encryptNow}
+            onDecrypt={state.decryptNow}
             onNavigate={setPage}
           />
         )}
@@ -90,6 +94,8 @@ export default function App() {
             onActivate={state.activateProfile}
             onDeactivate={state.deactivateProfile}
             onDelete={state.deleteProfile}
+            onCreate={state.createProfile}
+            onAppend={state.appendProfile}
           />
         )}
         {page === "monitor" && (

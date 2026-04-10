@@ -8,6 +8,7 @@ export function useAppState() {
   const [activity, setActivity] = useState<ActivityEntry[]>([]);
   const [lastScan, setLastScan] = useState<string>("—");
   const [loading, setLoading] = useState(true);
+  const [secret, setSecret] = useState<string>("");
 
   const activeProfile = profiles.find((p) => p.active) ?? null;
 
@@ -32,23 +33,25 @@ export function useAppState() {
 
   async function activateProfile(name: string) {
     try {
-      await invoke("activate_profile", { name });
+      await invoke("activate_profile", { name, secret: secret || null });
       await loadProfiles();
-      addActivity(`Profile activated: ${name}`);
+      addActivity(`Profile activated + files encrypted: ${name}`);
     } catch (e) {
       console.error("Failed to activate profile:", e);
-      addActivity(`Error: failed to activate ${name}`);
+      addActivity(`Error: failed to activate ${name} — ${e}`);
+      throw e;
     }
   }
 
   async function deactivateProfile(name: string) {
     try {
-      await invoke("deactivate_profile", { name });
+      await invoke("deactivate_profile", { name, secret: secret || null });
       await loadProfiles();
-      addActivity(`Profile deactivated: ${name}`);
+      addActivity(`Profile deactivated + files decrypted: ${name}`);
     } catch (e) {
       console.error("Failed to deactivate profile:", e);
-      addActivity(`Error: failed to deactivate ${name}`);
+      addActivity(`Error: failed to deactivate ${name} — ${e}`);
+      throw e;
     }
   }
 
@@ -59,7 +62,54 @@ export function useAppState() {
       addActivity(`Profile deleted: ${name}`);
     } catch (e) {
       console.error("Failed to delete profile:", e);
-      addActivity(`Error: failed to delete ${name}`);
+      addActivity(`Error: failed to delete ${name} — ${e}`);
+      throw e;
+    }
+  }
+
+  async function createProfile(name: string, files: string[], globs: string[]) {
+    try {
+      await invoke("create_profile", { name, files, globs });
+      await loadProfiles();
+      addActivity(`Profile created: ${name}`);
+    } catch (e) {
+      console.error("Failed to create profile:", e);
+      addActivity(`Error: failed to create profile ${name} — ${e}`);
+      throw e;
+    }
+  }
+
+  async function appendProfile(name: string, files: string[], globs: string[]) {
+    try {
+      await invoke("append_profile", { name, files, globs });
+      await loadProfiles();
+      addActivity(`Files added to profile: ${name}`);
+    } catch (e) {
+      console.error("Failed to append profile:", e);
+      addActivity(`Error: failed to append to ${name} — ${e}`);
+      throw e;
+    }
+  }
+
+  async function encryptNow() {
+    try {
+      await invoke("encrypt_now", { secret: secret || null });
+      addActivity("Files encrypted manually");
+    } catch (e) {
+      console.error("Failed to encrypt:", e);
+      addActivity(`Error: encryption failed — ${e}`);
+      throw e;
+    }
+  }
+
+  async function decryptNow() {
+    try {
+      await invoke("decrypt_now", { secret: secret || null });
+      addActivity("Files decrypted manually");
+    } catch (e) {
+      console.error("Failed to decrypt:", e);
+      addActivity(`Error: decryption failed — ${e}`);
+      throw e;
     }
   }
 
@@ -90,9 +140,15 @@ export function useAppState() {
     activeProfile,
     lastScan,
     loading,
+    secret,
+    setSecret,
     activateProfile,
     deactivateProfile,
     deleteProfile,
+    createProfile,
+    appendProfile,
+    encryptNow,
+    decryptNow,
     runScan,
   };
 }

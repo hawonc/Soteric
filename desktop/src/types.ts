@@ -8,6 +8,7 @@ export interface Profile {
 export interface DetectedProcess {
   name: string;
   pid: number;
+  command: string;
 }
 
 export interface ActivityEntry {

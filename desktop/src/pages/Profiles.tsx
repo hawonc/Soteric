@@ -1,20 +1,31 @@
 import { useState, useEffect } from "react";
-import { Shield, FileText, Trash2, CheckCircle2, Circle } from "lucide-react";
+import { Shield, FileText, Trash2, CheckCircle2, Circle, Plus } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import type { Profile } from "@/types";
 
 interface Props {
   profiles: Profile[];
-  onActivate: (name: string) => void;
-  onDeactivate: (name: string) => void;
-  onDelete: (name: string) => void;
+  onActivate: (name: string) => Promise<void>;
+  onDeactivate: (name: string) => Promise<void>;
+  onDelete: (name: string) => Promise<void>;
+  onCreate: (name: string, files: string[], globs: string[]) => Promise<void>;
+  onAppend: (name: string, files: string[], globs: string[]) => Promise<void>;
 }
 
-export default function Profiles({ profiles, onActivate, onDeactivate, onDelete }: Props) {
+export default function Profiles({ profiles, onActivate, onDeactivate, onDelete, onCreate, onAppend }: Props) {
   const [selected, setSelected] = useState<string>(profiles[0]?.name ?? "");
   const selectedProfile = profiles.find((p) => p.name === selected) ?? null;
 
@@ -23,6 +34,60 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
       setSelected(profiles[0]?.name ?? "");
     }
   }, [profiles, selected]);
+
+  // Create profile dialog state
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newName, setNewName] = useState("");
+  const [newFiles, setNewFiles] = useState("");
+  const [newGlobs, setNewGlobs] = useState("");
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [createBusy, setCreateBusy] = useState(false);
+
+  // Append dialog state
+  const [appendOpen, setAppendOpen] = useState(false);
+  const [appendMode, setAppendMode] = useState<"file" | "glob">("file");
+  const [appendValue, setAppendValue] = useState("");
+  const [appendError, setAppendError] = useState<string | null>(null);
+  const [appendBusy, setAppendBusy] = useState(false);
+
+  // Action error/busy state
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState(false);
+
+  async function handleCreate() {
+    if (!newName.trim()) return;
+    setCreateBusy(true);
+    setCreateError(null);
+    try {
+      const files = newFiles.split("\n").map((s) => s.trim()).filter(Boolean);
+      const globs = newGlobs.split("\n").map((s) => s.trim()).filter(Boolean);
+      await onCreate(newName.trim(), files, globs);
+      setCreateOpen(false);
+      setNewName("");
+      setNewFiles("");
+      setNewGlobs("");
+      setSelected(newName.trim());
+    } catch (e) {
+      setCreateError(String(e));
+    }
+    setCreateBusy(false);
+  }
+
+  async function handleAppend() {
+    if (!selectedProfile || !appendValue.trim()) return;
+    setAppendBusy(true);
+    setAppendError(null);
+    try {
+      const files = appendMode === "file" ? appendValue.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+      const globs = appendMode === "glob" ? appendValue.split("\n").map((s) => s.trim()).filter(Boolean) : [];
+      await onAppend(selectedProfile.name, files, globs);
+      setAppendOpen(false);
+      setAppendValue("");
+    } catch (e) {
+      setAppendError(String(e));
+    }
+    setAppendBusy(false);
+  }
 
   return (
     <div className="p-6 space-y-4">
@@ -63,8 +128,14 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
               ))}
             </div>
           </ScrollArea>
-          <Button variant="outline" size="sm" className="w-full">
-            + Create Profile
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full"
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="w-3.5 h-3.5 mr-1" />
+            Create Profile
           </Button>
         </div>
 
@@ -100,9 +171,26 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
                   </div>
                 </ScrollArea>
                 <div className="flex gap-2 mt-3">
-                  <Button variant="outline" size="sm">+ Add File</Button>
-                  <Button variant="outline" size="sm">+ Add Glob</Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={selectedProfile.active}
+                    onClick={() => { setAppendMode("file"); setAppendValue(""); setAppendError(null); setAppendOpen(true); }}
+                  >
+                    + Add File
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={selectedProfile.active}
+                    onClick={() => { setAppendMode("glob"); setAppendValue(""); setAppendError(null); setAppendOpen(true); }}
+                  >
+                    + Add Glob
+                  </Button>
                 </div>
+                {selectedProfile.active && (
+                  <p className="text-xs text-muted-foreground mt-1">Deactivate profile to add files</p>
+                )}
               </div>
 
               <Separator />
@@ -117,28 +205,46 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => onDeactivate(selectedProfile.name)}
+                      disabled={actionBusy}
+                      onClick={async () => {
+                        setActionBusy(true);
+                        setActionError(null);
+                        try { await onDeactivate(selectedProfile.name); } catch (e) { setActionError(String(e)); }
+                        setActionBusy(false);
+                      }}
                       className="flex items-center gap-1.5"
                     >
                       <Circle className="w-3.5 h-3.5" />
-                      Deactivate
+                      {actionBusy ? "Working..." : "Deactivate"}
                     </Button>
                   ) : (
                     <Button
                       size="sm"
-                      onClick={() => onActivate(selectedProfile.name)}
+                      disabled={actionBusy}
+                      onClick={async () => {
+                        setActionBusy(true);
+                        setActionError(null);
+                        try { await onActivate(selectedProfile.name); } catch (e) { setActionError(String(e)); }
+                        setActionBusy(false);
+                      }}
                       className="flex items-center gap-1.5"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      Activate
+                      {actionBusy ? "Working..." : "Activate"}
                     </Button>
                   )}
                   <Button
                     variant="destructive"
                     size="sm"
-                    onClick={() => {
-                      onDelete(selectedProfile.name);
-                      setSelected(profiles.find((p) => p.name !== selectedProfile.name)?.name ?? "");
+                    disabled={selectedProfile.active || actionBusy}
+                    onClick={async () => {
+                      setActionBusy(true);
+                      setActionError(null);
+                      try {
+                        await onDelete(selectedProfile.name);
+                        setSelected(profiles.find((p) => p.name !== selectedProfile.name)?.name ?? "");
+                      } catch (e) { setActionError(String(e)); }
+                      setActionBusy(false);
                     }}
                     className="flex items-center gap-1.5"
                   >
@@ -146,6 +252,12 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
                     Delete
                   </Button>
                 </div>
+                {selectedProfile.active && !actionError && (
+                  <p className="text-xs text-muted-foreground mt-1">Deactivate profile before deleting</p>
+                )}
+                {actionError && (
+                  <p className="text-xs text-destructive mt-2">{actionError}</p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -157,6 +269,89 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete 
           </Card>
         )}
       </div>
+
+      {/* Create Profile Dialog */}
+      <Dialog open={createOpen} onOpenChange={setCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create Profile</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="profile-name">Profile Name</Label>
+              <Input
+                id="profile-name"
+                placeholder="e.g. secrets"
+                value={newName}
+                onChange={(e) => setNewName(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profile-files">Files (one per line)</Label>
+              <textarea
+                id="profile-files"
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px] font-mono"
+                placeholder={"/path/to/secret.txt\n/path/to/.env"}
+                value={newFiles}
+                onChange={(e) => setNewFiles(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="profile-globs">Globs (one per line, optional)</Label>
+              <textarea
+                id="profile-globs"
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[60px] font-mono"
+                placeholder={"./.*\ntemp/*.txt"}
+                value={newGlobs}
+                onChange={(e) => setNewGlobs(e.target.value)}
+              />
+            </div>
+            {createError && (
+              <p className="text-sm text-destructive">{createError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setCreateOpen(false)}>Cancel</Button>
+            <Button onClick={handleCreate} disabled={!newName.trim() || createBusy}>
+              {createBusy ? "Creating..." : "Create"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Append File/Glob Dialog */}
+      <Dialog open={appendOpen} onOpenChange={setAppendOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              Add {appendMode === "file" ? "Files" : "Globs"} to {selectedProfile?.name}
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="append-value">
+                {appendMode === "file" ? "File paths (one per line)" : "Glob patterns (one per line)"}
+              </Label>
+              <textarea
+                id="append-value"
+                className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px] font-mono"
+                placeholder={appendMode === "file" ? "/path/to/file.txt" : "./.*"}
+                value={appendValue}
+                onChange={(e) => setAppendValue(e.target.value)}
+              />
+            </div>
+            {appendError && (
+              <p className="text-sm text-destructive">{appendError}</p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAppendOpen(false)}>Cancel</Button>
+            <Button onClick={handleAppend} disabled={!appendValue.trim() || appendBusy}>
+              {appendBusy ? "Adding..." : "Add"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
