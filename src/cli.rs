@@ -80,5 +80,6 @@ pub enum Command {
     /// Remove biometric authentication (macOS only).
     #[command(name = "remove-biometric")]
     RemoveBiometric,
+    /// Start a long-running background process that monitors for AI coding tools and activates profiles accordingly.
     Run,
 }
