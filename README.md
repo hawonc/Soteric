@@ -19,6 +19,26 @@ Current Implementation:
 - Mapping specific processes (like AI coding tools) to profiles for automatic activation
 - Background monitoring to detect and respond to running AI tools
 
+## Encryption
+
+The encryption module handles secure file encryption and decryption using industry-standard cryptography:
+
+- **Encryption**: Files are encrypted with AES-256-GCM (Authenticated Encryption with Associated Data) for confidentiality and integrity. A random salt and nonce are generated for each file to ensure unique encryption.
+- **Key Derivation**: User-provided keys are strengthened using Argon2 (a memory-hard function) to resist brute-force attacks.
+- **Decryption**: Reverses the process, verifying data integrity during decryption. Invalid keys or corrupted files are rejected.
+
+This ensures protected files remain unreadable to AI tools while maintaining strong security practices.
+
+## Biometric Authentication (macOS)
+
+On macOS, Soteric supports Touch ID authentication to secure your encryption key:
+
+- **Secure Storage**: The encryption secret is stored in the system Keychain, a secure OS-level credential store.
+- **Biometric Unlock**: When you run Soteric, it first attempts to retrieve the secret from Keychain using Touch ID. If biometric auth isn't set up, it falls back to reading from `secret.txt`.
+- **Setup and Management**: Use `setup-biometric` to enable Touch ID protection and `remove-biometric` to disable it.
+
+This eliminates the need to store your encryption key in plaintext while providing convenient, biometric-secured access to your sensitive files.
+
 ## Commands
 
 Create a profile from explicit files:
