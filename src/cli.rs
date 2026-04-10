@@ -59,7 +59,7 @@ pub enum Command {
     Scan,
     /// Show the active profile and current AI-tool detections.
     Status,
-    // Allows the user to set the secret instead of pulling from the file 'secrets.txt'
+    /// Allows the user to set the secret instead of pulling from the file 'secrets.txt'
     SetSecret { secret: String },
     /// Allows the user to set a mapping from a process name to a profile, so that when that process is detected, the corresponding profile is automatically activated.
     SetMapping {
