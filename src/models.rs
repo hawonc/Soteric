@@ -29,6 +29,8 @@ pub struct Profile {
     pub root: String,
     pub files: Vec<String>,
     pub created_with: Option<String>,
+    #[serde(default)]
+    pub encrypted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -73,6 +75,7 @@ mod tests {
             root: "/home/user".to_string(),
             files: vec!["/home/user/secret.txt".to_string()],
             created_with: Some("explicit files".to_string()),
+            encrypted: false,
         };
         assert_eq!(profile.root, "/home/user");
         assert_eq!(profile.files.len(), 1);
@@ -85,6 +88,7 @@ mod tests {
             root: "/home/user".to_string(),
             files: vec![],
             created_with: None,
+            encrypted: false,
         };
         profile.files.push("/home/user/secret.txt".to_string());
 
@@ -118,6 +122,7 @@ mod tests {
             root: "/test".to_string(),
             files: vec!["file1.txt".to_string()],
             created_with: Some("globs".to_string()),
+            encrypted: false,
         };
 
         let stored = StoredProfile::Detailed(profile);

@@ -205,3 +205,21 @@ cargo fmt
 ```
 
 The runtime profile store lives at `.soteric/profiles.json` in the repository root when Soteric is run inside a Git repository. It should be treated as local state rather than committed project data.
+
+## Desktop GUI
+
+Soteric includes a desktop application built with [Tauri](https://tauri.app/) + React + Tailwind CSS + shadcn/ui.
+
+- **Dashboard** — Active profile, encryption status, AI tool detections, quick encrypt/decrypt actions.
+- **Profiles** — Create, activate, deactivate, and delete profiles. Add files or globs.
+- **Live Monitor** — Real-time process scanning with background monitoring. Auto-encrypts when mapped AI tools are detected.
+- **Activity Log** — Timestamped history of all actions and events.
+- **Settings** — Encryption key management, Touch ID setup, process-to-profile mappings.
+
+```bash
+cd desktop
+npm install
+npm run tauri dev
+```
+
+See [`desktop/README.md`](desktop/README.md) for details.

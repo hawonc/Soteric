@@ -1,8 +1,10 @@
-import { Shield, Bot, Zap, Clock } from "lucide-react";
+import { useState } from "react";
+import { Shield, Bot, Zap, Clock, KeyRound } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import type { Profile, DetectedProcess, ActivityEntry } from "@/types";
 
 interface Props {
@@ -10,7 +12,11 @@ interface Props {
   processes: DetectedProcess[];
   activity: ActivityEntry[];
   lastScan: string;
+  secret: string;
+  onSecretChange: (secret: string) => void;
   onScan: () => void;
+  onEncrypt: () => Promise<void>;
+  onDecrypt: () => Promise<void>;
   onNavigate: (page: "dashboard" | "profiles" | "monitor" | "activity") => void;
 }
 
@@ -19,9 +25,15 @@ export default function Dashboard({
   processes,
   activity,
   lastScan,
+  secret,
+  onSecretChange,
   onScan,
+  onEncrypt,
+  onDecrypt,
   onNavigate,
 }: Props) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const isDetected = processes.length > 0;
 
   return (
@@ -54,7 +66,15 @@ export default function Dashboard({
             <div className="space-y-1">
               <p className="font-semibold text-lg">{activeProfile.name}</p>
               <p className="text-sm text-muted-foreground">{activeProfile.root}</p>
-              <p className="text-sm text-muted-foreground">{activeProfile.files.length} protected files</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{activeProfile.files.length} protected files</span>
+                <Badge
+                  variant={activeProfile.encrypted ? "default" : "secondary"}
+                  className={`text-xs ${activeProfile.encrypted ? "bg-amber-600 hover:bg-amber-600 text-white" : ""}`}
+                >
+                  {activeProfile.encrypted ? "Encrypted" : "Decrypted"}
+                </Badge>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -108,6 +128,28 @@ export default function Dashboard({
         </CardContent>
       </Card>
 
+      {/* Secret Key */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <KeyRound className="w-4 h-4" />
+            Secret Key
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <Input
+            type="password"
+            placeholder="Enter encryption password..."
+            value={secret}
+            onChange={(e) => onSecretChange(e.target.value)}
+            className="max-w-xs"
+          />
+          <p className="text-xs text-muted-foreground mt-2">
+            {secret ? "Key set for this session" : "Required for encrypt/decrypt operations"}
+          </p>
+        </CardContent>
+      </Card>
+
       {/* Quick Actions */}
       <Card>
         <CardHeader className="pb-3">
@@ -118,13 +160,36 @@ export default function Dashboard({
         </CardHeader>
         <CardContent>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" disabled={!activeProfile}>
-              Encrypt Files
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!activeProfile || busy || (activeProfile?.encrypted ?? false)}
+              onClick={async () => {
+                setBusy(true);
+                setError(null);
+                try { await onEncrypt(); } catch (e) { setError(String(e)); }
+                setBusy(false);
+              }}
+            >
+              {busy ? "Working..." : "Encrypt Files"}
             </Button>
-            <Button variant="outline" size="sm" disabled={!activeProfile}>
-              Decrypt Files
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={!activeProfile || busy || !(activeProfile?.encrypted ?? false)}
+              onClick={async () => {
+                setBusy(true);
+                setError(null);
+                try { await onDecrypt(); } catch (e) { setError(String(e)); }
+                setBusy(false);
+              }}
+            >
+              {busy ? "Working..." : "Decrypt Files"}
             </Button>
           </div>
+          {error && (
+            <p className="text-xs text-destructive mt-2">{error}</p>
+          )}
           {!activeProfile && (
             <p className="text-xs text-muted-foreground mt-2">Activate a profile to enable encryption</p>
           )}

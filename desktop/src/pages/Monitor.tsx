@@ -1,4 +1,5 @@
-import { RefreshCw, ShieldAlert, ShieldCheck } from "lucide-react";
+import { useState } from "react";
+import { RefreshCw, ShieldAlert, ShieldCheck, Activity } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -6,26 +7,24 @@ import { Separator } from "@/components/ui/separator";
 import type { DetectedProcess, Profile } from "@/types";
 
 const KNOWN_TOOLS = [
-  "codex",
-  "claude",
-  "claude-code",
-  "opencode",
-  "openhands",
-  "cursor",
-  "copilot",
-  "windsurf",
-  "antigravity",
+  "codex", "claude", "claude-code", "opencode", "openhands",
+  "cursor", "copilot", "windsurf", "antigravity",
 ];
 
 interface Props {
   processes: DetectedProcess[];
   activeProfile: Profile | null;
   lastScan: string;
+  monitorRunning: boolean;
   onScan: () => void;
+  onStartMonitor: () => Promise<void>;
+  onStopMonitor: () => Promise<void>;
 }
 
-export default function Monitor({ processes, activeProfile, lastScan, onScan }: Props) {
+export default function Monitor({ processes, activeProfile, lastScan, monitorRunning, onScan, onStartMonitor, onStopMonitor }: Props) {
   const isDetected = processes.length > 0;
+  const [monitorBusy, setMonitorBusy] = useState(false);
+  const [monitorError, setMonitorError] = useState<string | null>(null);
 
   return (
     <div className="p-6 space-y-4 max-w-2xl">
@@ -65,15 +64,19 @@ export default function Monitor({ processes, activeProfile, lastScan, onScan }: 
         <CardContent>
           {processes.length > 0 ? (
             <div className="space-y-2">
-              <div className="grid grid-cols-3 text-xs font-medium text-muted-foreground uppercase tracking-wide pb-2 border-b">
+              <div className="grid grid-cols-[1fr_80px_1fr_80px] text-xs font-medium text-muted-foreground uppercase tracking-wide pb-2 border-b">
                 <span>Process</span>
                 <span>PID</span>
+                <span>Command</span>
                 <span>Status</span>
               </div>
               {processes.map((p) => (
-                <div key={p.pid} className="grid grid-cols-3 text-sm py-1.5">
+                <div key={p.pid} className="grid grid-cols-[1fr_80px_1fr_80px] text-sm py-1.5 items-center">
                   <span className="font-medium">{p.name}</span>
                   <span className="font-mono text-muted-foreground">{p.pid}</span>
+                  <span className="font-mono text-xs text-muted-foreground truncate" title={p.command}>
+                    {p.command}
+                  </span>
                   <Badge variant="destructive" className="w-fit text-xs">running</Badge>
                 </div>
               ))}
@@ -85,7 +88,7 @@ export default function Monitor({ processes, activeProfile, lastScan, onScan }: 
       </Card>
 
       {/* Protection status */}
-      {isDetected && activeProfile && (
+      {isDetected && activeProfile && activeProfile.encrypted && (
         <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400">
@@ -94,7 +97,7 @@ export default function Monitor({ processes, activeProfile, lastScan, onScan }: 
           </CardHeader>
           <CardContent className="text-sm space-y-1">
             <p>Profile: <span className="font-medium">{activeProfile.name}</span></p>
-            <p className="text-muted-foreground">Files would be encrypted on detection</p>
+            <p className="text-muted-foreground">Files encrypted for this profile</p>
           </CardContent>
         </Card>
       )}
@@ -109,11 +112,42 @@ export default function Monitor({ processes, activeProfile, lastScan, onScan }: 
             <RefreshCw className="w-4 h-4" />
             Scan Now
           </Button>
-          <Button variant="outline" disabled>
-            Enable Background Monitor
-          </Button>
+          {monitorRunning ? (
+            <Button
+              variant="destructive"
+              size="sm"
+              disabled={monitorBusy}
+              onClick={async () => {
+                setMonitorBusy(true);
+                setMonitorError(null);
+                try { await onStopMonitor(); } catch (e) { setMonitorError(String(e)); }
+                setMonitorBusy(false);
+              }}
+              className="flex items-center gap-1.5"
+            >
+              <Activity className="w-3.5 h-3.5" />
+              {monitorBusy ? "Stopping..." : "Stop Monitor"}
+            </Button>
+          ) : (
+            <Button
+              variant="outline"
+              disabled={monitorBusy}
+              onClick={async () => {
+                setMonitorBusy(true);
+                setMonitorError(null);
+                try { await onStartMonitor(); } catch (e) { setMonitorError(String(e)); }
+                setMonitorBusy(false);
+              }}
+            >
+              {monitorBusy ? "Starting..." : "Enable Background Monitor"}
+            </Button>
+          )}
         </div>
-        <p className="text-xs text-muted-foreground">Last scan: {lastScan}</p>
+        {monitorError && <p className="text-xs text-destructive">{monitorError}</p>}
+        <p className="text-xs text-muted-foreground">
+          Last scan: {lastScan}
+          {monitorRunning && " · Background monitor scans every 5s"}
+        </p>
       </div>
 
       <Separator />

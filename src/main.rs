@@ -11,7 +11,7 @@ use soteric::process_scan::DetectedProcess;
 use soteric::process_scan::scan_agent_processes;
 use soteric::profiles::{
     activate_profile, deactivate_profile, add_profile, append_profile, current_profile_store_path, delete_profile,
-    list_profiles, load_profiles, save_profiles, show_profile, active_profile_files,
+    list_profiles, load_profiles, save_profiles, show_profile,
 };
 use soteric::encrypter::Encrypter;
 
@@ -95,10 +95,18 @@ fn main() -> Result<()> {
         }
         Command::SetSecret { secret } => {
             println!("Setting new secret.");
-            let files = active_profile_files(&state)?;
-            Encrypter::decrypt(&files, &secret_key)?;
+            let active_name = state.active_profile.clone()
+                .ok_or_else(|| anyhow::anyhow!("No active profile"))?;
+            let profile = state.profiles.get_mut(&active_name)
+                .ok_or_else(|| anyhow::anyhow!("Active profile not found"))?;
+            if profile.encrypted {
+                Encrypter::decrypt(&profile.files, &secret_key)?;
+                profile.encrypted = false;
+            }
             secret_key = secret;
-            Encrypter::encrypt(&files, &secret_key)?;
+            Encrypter::encrypt(&profile.files, &secret_key)?;
+            profile.encrypted = true;
+            save_profiles(&profile_file, &state)?;
         }
         Command::SetMapping { process, profile } => {
             if !state.profiles.contains_key(&profile) {
@@ -235,38 +243,54 @@ fn main() -> Result<()> {
 }
 
 fn activate_and_encrypt_profile(
-    name: &str, 
+    name: &str,
     state: &mut ProfileState,
     secret_key: &str,
-    profile_file: &Path) -> Result<()> 
+    profile_file: &Path) -> Result<()>
 {
-    if state.active_profile.is_some() {
-        let files = active_profile_files(&state)?;
-        Encrypter::decrypt(&files, &secret_key)?;
+    // Decrypt old active profile only if its files are encrypted
+    if let Some(old_name) = state.active_profile.clone() {
+        if let Some(old_profile) = state.profiles.get_mut(&old_name) {
+            if old_profile.encrypted {
+                Encrypter::decrypt(&old_profile.files, secret_key)?;
+                old_profile.encrypted = false;
+            }
+        }
     }
 
-    activate_profile(&name, state)?;
-    let files = active_profile_files(&state)?;
-    Encrypter::encrypt(&files, &secret_key)?;
-    save_profiles(&profile_file, &state)?;
-    
+    activate_profile(name, state)?;
+
+    // Encrypt new profile only if not already encrypted
+    let needs_encrypt = !state.profiles[name].encrypted;
+    if needs_encrypt {
+        let files = &state.profiles[name].files;
+        Encrypter::encrypt(files, secret_key)?;
+        state.profiles.get_mut(name).unwrap().encrypted = true;
+    }
+    save_profiles(profile_file, state)?;
+
     Ok(())
 }
 
 fn deactivate_and_decrypt_profile(
-    name: &str, 
+    name: &str,
     state: &mut ProfileState,
     secret_key: &str,
     profile_file: &Path) -> Result<()>
 {
     if state.active_profile.as_deref() == Some(name) {
-        let files = active_profile_files(&state)?;
-        Encrypter::decrypt(&files, &secret_key)?;
+        // Decrypt only if files are encrypted
+        let profile = state.profiles.get_mut(name)
+            .ok_or_else(|| anyhow::anyhow!("Profile '{name}' not found"))?;
+        if profile.encrypted {
+            Encrypter::decrypt(&profile.files, secret_key)?;
+            profile.encrypted = false;
+        }
 
-        deactivate_profile(&name, state)?;
-        save_profiles(&profile_file, &state)?;
+        deactivate_profile(name, state)?;
+        save_profiles(profile_file, state)?;
     }
-    
+
     Ok(())
 }
 
