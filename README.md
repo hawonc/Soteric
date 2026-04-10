@@ -1,13 +1,6 @@
 # Soteric
 
-Soteric is a small Rust CLI for protecting a narrow set of files from AI coding tools.
-
-Today, the implemented pieces are:
-- profile creation from explicit files and globs
-- profile activation and deletion
-- process scanning for known AI coding tools such as Codex and Claude
-
-The intended next step is cryptographic encryption of the files associated with the relevant profile when one of those tools is detected. That encryption workflow is not implemented yet.
+Soteric is a Rust CLI tool that protects sensitive files from AI coding assistants (like GitHub Copilot or Claude) by automatically encrypting them when these tools are detected running on your system.
 
 ## Current Model
 
@@ -20,6 +13,11 @@ Each profile stores:
 - lightweight metadata about how the profile was created
 
 The CLI also tracks one active profile. Right now, scanning and profile management are the working features. Automatic encryption and decryption are placeholders.
+
+Current Implementation:
+- Automatic encryption/decryption of protected files when profiles are activated or deactivated
+- Mapping specific processes (like AI coding tools) to profiles for automatic activation
+- Background monitoring to detect and respond to running AI tools
 
 ## Commands
 
@@ -92,17 +90,45 @@ Show the active profile and current detections together:
 soteric status
 ```
 
-Define the secret for file encryption and decryption:
+Set the secret for file encryption and decryption:
 
 ```bash
-soteric secret *****
+soteric set-secret my-secret
 ```
 
-Current placeholders:
+Define a mapping from a process to a profile:
 
 ```bash
-soteric encrypt-now
-soteric decrypt-now
+soteric set-mapping --process cursor --profile hidden-files
+```
+
+Delete a process-to-profile mapping:
+
+```bash
+soteric delete-mapping cursor
+```
+
+List all process-to-profile mappings:
+
+```bash
+soteric list-mappings
+```
+
+Set up biometric (Touch ID) authentication for the encryption key (macOS only):
+
+```bash
+soteric setup-biometric
+```
+
+Remove biometric authentication (macOS only):
+
+```bash
+soteric remove-biometric
+```
+
+Start the background process that monitors for AI coding tools and activates profiles accordingly:
+
+```bash
 soteric run
 ```
 
@@ -119,8 +145,6 @@ soteric run
 - `copilot`
 - `windsurf`
 - `antigravity`
-
-At the moment, scanning only reports detections. It does not yet trigger encryption or map a detected process to a stored profile automatically.
 
 ## Profile Notes
 
