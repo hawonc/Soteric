@@ -1,13 +1,11 @@
 use serde::{Deserialize, Serialize};
 use soteric::encrypter::Encrypter;
-use soteric::profiles::{
-    active_profile_files, load_profiles, save_profiles,
-};
+use soteric::profiles::{load_profiles, save_profiles};
 use soteric::process_scan::scan_agent_processes;
 use chrono::Timelike;
 use std::collections::HashSet;
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter, Manager, State};
+use tauri::{AppHandle, Emitter, State};
 use tauri_plugin_notification::NotificationExt;
 
 fn global_profile_path() -> PathBuf {
@@ -100,12 +98,10 @@ fn activate_profile(name: String, secret: Option<String>) -> Result<(), String> 
     // Encrypt new profile only if not already encrypted
     let needs_encrypt = !state.profiles[&name].encrypted;
     if needs_encrypt {
+        Encrypter::encrypt(&state.profiles[&name].files, &key).map_err(|e| e.to_string())?;
         state.profiles.get_mut(&name).unwrap().encrypted = true;
     }
     save_profiles(&path, &state).map_err(|e| e.to_string())?;
-    if needs_encrypt {
-        Encrypter::encrypt(&state.profiles[&name].files, &key).map_err(|e| e.to_string())?;
-    }
 
     Ok(())
 }
@@ -148,9 +144,10 @@ fn encrypt_now(secret: Option<String>) -> Result<(), String> {
     }
 
     let key = resolve_secret(secret)?;
-    profile.encrypted = true;
+    let files = profile.files.clone();
+    Encrypter::encrypt(&files, &key).map_err(|e| e.to_string())?;
+    state.profiles.get_mut(&active_name).unwrap().encrypted = true;
     save_profiles(&path, &state).map_err(|e| e.to_string())?;
-    Encrypter::encrypt(&state.profiles[&active_name].files, &key).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -169,9 +166,10 @@ fn decrypt_now(secret: Option<String>) -> Result<(), String> {
     }
 
     let key = resolve_secret(secret)?;
-    profile.encrypted = false;
+    let files = profile.files.clone();
+    Encrypter::decrypt(&files, &key).map_err(|e| e.to_string())?;
+    state.profiles.get_mut(&active_name).unwrap().encrypted = false;
     save_profiles(&path, &state).map_err(|e| e.to_string())?;
-    Encrypter::decrypt(&state.profiles[&active_name].files, &key).map_err(|e| e.to_string())?;
     Ok(())
 }
 
@@ -389,10 +387,11 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
     if monitor.running.load(Relaxed) {
         return Err("Monitor is already running".to_string());
     }
-    monitor.running.store(true, Relaxed);
-    monitor.stop.store(false, Relaxed);
 
     let key = resolve_secret(secret)?;
+
+    monitor.running.store(true, Relaxed);
+    monitor.stop.store(false, Relaxed);
     let stop = monitor.stop.clone();
     let running = monitor.running.clone();
 
@@ -552,13 +551,11 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                         soteric::profiles::activate_profile(&profile_name, &mut state)?;
                         let needs_encrypt = !state.profiles[&profile_name].encrypted;
                         if needs_encrypt {
+                            Encrypter::encrypt(&state.profiles[&profile_name].files, &key)?;
                             state.profiles.get_mut(&profile_name).unwrap().encrypted = true;
                         }
                         state.active_process = new_process.clone();
                         save_profiles(&path, &state)?;
-                        if needs_encrypt {
-                            Encrypter::encrypt(&state.profiles[&profile_name].files, &key)?;
-                        }
                         Ok(())
                     })();
                     let msg = match result {

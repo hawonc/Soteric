@@ -120,8 +120,9 @@ export default function Settings({
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="space-y-2">
-            <Label>Current session key</Label>
+            <Label htmlFor="session-key">Current session key</Label>
             <Input
+              id="session-key"
               type="password"
               placeholder="Enter encryption password..."
               value={secret}
@@ -136,10 +137,11 @@ export default function Settings({
           <Separator />
 
           <div className="space-y-2">
-            <Label>Change secret key</Label>
+            <Label htmlFor="new-secret">Change secret key</Label>
             <p className="text-xs text-muted-foreground">Re-encrypts active profile files with the new key</p>
             <div className="flex gap-2 items-end">
               <Input
+                id="new-secret"
                 type="password"
                 placeholder="New secret key..."
                 value={newSecret}
@@ -264,8 +266,9 @@ export default function Settings({
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Process name</Label>
+              <Label htmlFor="map-process-select">Process name</Label>
               <select
+                id="map-process-select"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={mapProcess}
                 onChange={(e) => setMapProcess(e.target.value)}
@@ -277,14 +280,16 @@ export default function Settings({
               </select>
               <p className="text-xs text-muted-foreground">Or type a custom process name:</p>
               <Input
+                id="map-process-custom"
                 placeholder="Custom process name..."
                 value={mapProcess}
                 onChange={(e) => setMapProcess(e.target.value)}
               />
             </div>
             <div className="space-y-2">
-              <Label>Target profile</Label>
+              <Label htmlFor="map-profile-select">Target profile</Label>
               <select
+                id="map-profile-select"
                 className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 value={mapProfile}
                 onChange={(e) => setMapProfile(e.target.value)}

@@ -11,7 +11,7 @@ use soteric::process_scan::DetectedProcess;
 use soteric::process_scan::scan_agent_processes;
 use soteric::profiles::{
     activate_profile, deactivate_profile, add_profile, append_profile, current_profile_store_path, delete_profile,
-    list_profiles, load_profiles, save_profiles, show_profile, active_profile_files,
+    list_profiles, load_profiles, save_profiles, show_profile,
 };
 use soteric::encrypter::Encrypter;
 
@@ -101,6 +101,7 @@ fn main() -> Result<()> {
                 .ok_or_else(|| anyhow::anyhow!("Active profile not found"))?;
             if profile.encrypted {
                 Encrypter::decrypt(&profile.files, &secret_key)?;
+                profile.encrypted = false;
             }
             secret_key = secret;
             Encrypter::encrypt(&profile.files, &secret_key)?;
@@ -262,13 +263,11 @@ fn activate_and_encrypt_profile(
     // Encrypt new profile only if not already encrypted
     let needs_encrypt = !state.profiles[name].encrypted;
     if needs_encrypt {
+        let files = &state.profiles[name].files;
+        Encrypter::encrypt(files, secret_key)?;
         state.profiles.get_mut(name).unwrap().encrypted = true;
     }
     save_profiles(profile_file, state)?;
-    if needs_encrypt {
-        let files = &state.profiles[name].files;
-        Encrypter::encrypt(files, secret_key)?;
-    }
 
     Ok(())
 }

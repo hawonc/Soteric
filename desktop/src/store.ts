@@ -188,7 +188,7 @@ export function useAppState() {
 
   async function changeSecret(currentSecret: string, newSecret: string) {
     try {
-      await invoke("set_secret", { currentSecret: currentSecret || null, newSecret });
+      await invoke("set_secret", { current_secret: currentSecret || null, new_secret: newSecret });
       setSecret(newSecret);
       addActivity("Secret key changed");
     } catch (e) {
