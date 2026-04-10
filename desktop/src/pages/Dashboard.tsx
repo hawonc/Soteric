@@ -66,7 +66,15 @@ export default function Dashboard({
             <div className="space-y-1">
               <p className="font-semibold text-lg">{activeProfile.name}</p>
               <p className="text-sm text-muted-foreground">{activeProfile.root}</p>
-              <p className="text-sm text-muted-foreground">{activeProfile.files.length} protected files</p>
+              <div className="flex items-center gap-2 text-sm">
+                <span className="text-muted-foreground">{activeProfile.files.length} protected files</span>
+                <Badge
+                  variant={activeProfile.encrypted ? "default" : "secondary"}
+                  className={`text-xs ${activeProfile.encrypted ? "bg-amber-600 hover:bg-amber-600 text-white" : ""}`}
+                >
+                  {activeProfile.encrypted ? "Encrypted" : "Decrypted"}
+                </Badge>
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -155,7 +163,7 @@ export default function Dashboard({
             <Button
               variant="outline"
               size="sm"
-              disabled={!activeProfile || busy}
+              disabled={!activeProfile || busy || (activeProfile?.encrypted ?? false)}
               onClick={async () => {
                 setBusy(true);
                 setError(null);
@@ -168,7 +176,7 @@ export default function Dashboard({
             <Button
               variant="outline"
               size="sm"
-              disabled={!activeProfile || busy}
+              disabled={!activeProfile || busy || !(activeProfile?.encrypted ?? false)}
               onClick={async () => {
                 setBusy(true);
                 setError(null);

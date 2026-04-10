@@ -1,19 +1,21 @@
 import { useState } from "react";
-import { LayoutDashboard, Users, Monitor, ClipboardList, Shield } from "lucide-react";
+import { LayoutDashboard, Users, Monitor, ClipboardList, Shield, Settings as SettingsIcon } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { useAppState } from "./store";
 import Dashboard from "./pages/Dashboard";
 import Profiles from "./pages/Profiles";
 import MonitorPage from "./pages/Monitor";
 import ActivityLog from "./pages/ActivityLog";
+import Settings from "./pages/Settings";
 
-type Page = "dashboard" | "profiles" | "monitor" | "activity";
+type Page = "dashboard" | "profiles" | "monitor" | "activity" | "settings";
 
 const NAV = [
   { id: "dashboard" as Page, label: "Dashboard", icon: LayoutDashboard },
   { id: "profiles" as Page, label: "Profiles", icon: Users },
   { id: "monitor" as Page, label: "Live Monitor", icon: Monitor },
   { id: "activity" as Page, label: "Activity Log", icon: ClipboardList },
+  { id: "settings" as Page, label: "Settings", icon: SettingsIcon },
 ];
 
 export default function App() {
@@ -69,6 +71,9 @@ export default function App() {
               {state.activeProfile.name}
             </p>
           )}
+          {state.monitorRunning && (
+            <p className="text-xs text-emerald-600 mt-1">Monitor active</p>
+          )}
         </div>
       </aside>
 
@@ -94,6 +99,7 @@ export default function App() {
             onActivate={state.activateProfile}
             onDeactivate={state.deactivateProfile}
             onDelete={state.deleteProfile}
+            onNavigate={setPage}
             onCreate={state.createProfile}
             onAppend={state.appendProfile}
           />
@@ -103,10 +109,27 @@ export default function App() {
             processes={state.processes}
             activeProfile={state.activeProfile}
             lastScan={state.lastScan}
+            monitorRunning={state.monitorRunning}
             onScan={state.runScan}
+            onStartMonitor={state.startMonitor}
+            onStopMonitor={state.stopMonitor}
           />
         )}
         {page === "activity" && <ActivityLog activity={state.activity} />}
+        {page === "settings" && (
+          <Settings
+            secret={state.secret}
+            onSecretChange={state.setSecret}
+            biometricEnabled={state.biometricEnabled}
+            profiles={state.profiles}
+            mappings={state.mappings}
+            onChangeSecret={state.changeSecret}
+            onSetupBiometric={state.setupBiometric}
+            onRemoveBiometric={state.removeBiometric}
+            onAddMapping={state.addMapping}
+            onRemoveMapping={state.removeMapping}
+          />
+        )}
       </main>
     </div>
   );

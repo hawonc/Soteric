@@ -101,6 +101,7 @@ pub fn add_profile(
         root: estimate_profile_root(&resolved_files)?,
         created_with: Some(build_creation_info(globs.len(), resolved_files.len())),
         files: resolved_files,
+        encrypted: false,
     };
 
     state.profiles.insert(name.to_string(), profile);
@@ -234,6 +235,7 @@ fn migrate_profile(name: &str, entry: StoredProfile) -> Profile {
                 root,
                 files: Vec::new(),
                 created_with: Some("legacy-root".into()),
+                encrypted: false,
             }
         }
         StoredProfile::LegacyDetailed {
@@ -244,6 +246,7 @@ fn migrate_profile(name: &str, entry: StoredProfile) -> Profile {
             root,
             files: blacklisted_files,
             created_with,
+            encrypted: false,
         },
         StoredProfile::Detailed(profile) => profile,
     }

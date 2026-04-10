@@ -23,9 +23,10 @@ interface Props {
   onDelete: (name: string) => Promise<void>;
   onCreate: (name: string, files: string[], globs: string[]) => Promise<void>;
   onAppend: (name: string, files: string[], globs: string[]) => Promise<void>;
+  onNavigate: (page: "dashboard" | "profiles" | "monitor" | "activity" | "settings") => void;
 }
 
-export default function Profiles({ profiles, onActivate, onDeactivate, onDelete, onCreate, onAppend }: Props) {
+export default function Profiles({ profiles, onActivate, onDeactivate, onDelete, onCreate, onAppend, onNavigate }: Props) {
   const [selected, setSelected] = useState<string>(profiles[0]?.name ?? "");
   const selectedProfile = profiles.find((p) => p.name === selected) ?? null;
 
@@ -151,6 +152,14 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete,
                     Active
                   </Badge>
                 )}
+                {selectedProfile.active && (
+                  <Badge
+                    variant={selectedProfile.encrypted ? "default" : "secondary"}
+                    className={`text-xs ml-1 ${selectedProfile.encrypted ? "bg-amber-600 hover:bg-amber-600 text-white" : ""}`}
+                  >
+                    {selectedProfile.encrypted ? "Encrypted" : "Decrypted"}
+                  </Badge>
+                )}
               </CardTitle>
               <p className="text-sm text-muted-foreground">{selectedProfile.root}</p>
             </CardHeader>
@@ -224,7 +233,10 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete,
                       onClick={async () => {
                         setActionBusy(true);
                         setActionError(null);
-                        try { await onActivate(selectedProfile.name); } catch (e) { setActionError(String(e)); }
+                        try {
+                          await onActivate(selectedProfile.name);
+                          onNavigate("dashboard");
+                        } catch (e) { setActionError(String(e)); }
                         setActionBusy(false);
                       }}
                       className="flex items-center gap-1.5"
@@ -287,21 +299,24 @@ export default function Profiles({ profiles, onActivate, onDeactivate, onDelete,
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-files">Files (one per line)</Label>
+              <Label htmlFor="profile-files">Files (one per line, absolute or project‑relative)</Label>
               <textarea
                 id="profile-files"
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[80px] font-mono"
-                placeholder={"/path/to/secret.txt\n/path/to/.env"}
+                placeholder={"secrets.txt\n.env"}
                 value={newFiles}
                 onChange={(e) => setNewFiles(e.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Paths are resolved from your project root (the folder with <code>.git</code>) and must point to existing files.
+              </p>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="profile-globs">Globs (one per line, optional)</Label>
+              <Label htmlFor="profile-globs">Globs (one per line, optional, project‑relative)</Label>
               <textarea
                 id="profile-globs"
                 className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring min-h-[60px] font-mono"
-                placeholder={"./.*\ntemp/*.txt"}
+                placeholder={"*.env\ntemp/*.txt"}
                 value={newGlobs}
                 onChange={(e) => setNewGlobs(e.target.value)}
               />

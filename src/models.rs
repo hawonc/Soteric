@@ -29,6 +29,8 @@ pub struct Profile {
     pub root: String,
     pub files: Vec<String>,
     pub created_with: Option<String>,
+    #[serde(default)]
+    pub encrypted: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -3,6 +3,7 @@ export interface Profile {
   root: string;
   files: string[];
   active: boolean;
+  encrypted: boolean;
 }
 
 export interface DetectedProcess {
@@ -14,4 +15,9 @@ export interface DetectedProcess {
 export interface ActivityEntry {
   time: string;
   event: string;
+}
+
+export interface Mapping {
+  process: string;
+  profile: string;
 }
