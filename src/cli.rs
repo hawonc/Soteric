@@ -59,7 +59,7 @@ pub enum Command {
     Scan,
     /// Show the active profile and current AI-tool detections.
     Status,
-    // Allows the user to set the secret instead of pulling from the file 'secrets.txt'
+    /// Allows the user to set the secret instead of pulling from the file 'secrets.txt'
     SetSecret { secret: String },
     /// Allows the user to set a mapping from a process name to a profile, so that when that process is detected, the corresponding profile is automatically activated.
     SetMapping {
@@ -80,5 +80,59 @@ pub enum Command {
     /// Remove biometric authentication (macOS only).
     #[command(name = "remove-biometric")]
     RemoveBiometric,
+    /// Start a long-running background process that monitors for AI coding tools and activates profiles accordingly.
     Run,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_cli_parsing_add_profile() {
+        let args = vec![
+            "soteric",
+            "add-profile",
+            "test",
+            "--file",
+            "/path/to/file",
+        ];
+        let cli = Cli::try_parse_from(args);
+        assert!(cli.is_ok());
+    }
+
+    #[test]
+    fn test_cli_parsing_activate() {
+        let args = vec!["soteric", "activate", "my-profile"];
+        let cli = Cli::try_parse_from(args);
+        assert!(cli.is_ok());
+    }
+
+    #[test]
+    fn test_cli_parsing_scan() {
+        let args = vec!["soteric", "scan"];
+        let cli = Cli::try_parse_from(args);
+        assert!(cli.is_ok());
+    }
+
+    #[test]
+    fn test_cli_parsing_status() {
+        let args = vec!["soteric", "status"];
+        let cli = Cli::try_parse_from(args);
+        assert!(cli.is_ok());
+    }
+
+    #[test]
+    fn test_cli_parsing_set_mapping() {
+        let args = vec![
+            "soteric",
+            "set-mapping",
+            "--process",
+            "codex",
+            "--profile",
+            "secrets",
+        ];
+        let cli = Cli::try_parse_from(args);
+        assert!(cli.is_ok());
+    }
 }
