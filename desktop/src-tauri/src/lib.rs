@@ -32,6 +32,13 @@ fn resolve_secret(user_secret: Option<String>) -> Result<String, String> {
     std::fs::read_to_string("secret.txt")
         .map(|s| s.trim().to_string())
         .map_err(|_| "No secret key available. Please provide a password.".to_string())
+        .and_then(|s| {
+            if s.is_empty() {
+                Err("secret.txt is empty. Please provide a password.".to_string())
+            } else {
+                Ok(s)
+            }
+        })
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -388,7 +395,9 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
         return Err("Monitor is already running".to_string());
     }
 
-    let key = resolve_secret(secret)?;
+    // Validate secret is available before starting
+    let initial_key = resolve_secret(secret)?;
+    drop(initial_key);
 
     monitor.running.store(true, Relaxed);
     monitor.stop.store(false, Relaxed);
@@ -407,6 +416,12 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                 running.store(false, Relaxed);
                 break;
             }
+
+            // Re-resolve secret each cycle so key changes take effect
+            let key = match resolve_secret(None) {
+                Ok(k) => k,
+                Err(_) => continue,
+            };
 
             let path = global_profile_path();
             let mut state = match load_profiles(&path) {
