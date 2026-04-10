@@ -395,9 +395,7 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
         return Err("Monitor is already running".to_string());
     }
 
-    // Validate secret is available before starting
-    let initial_key = resolve_secret(secret)?;
-    drop(initial_key);
+    let key = resolve_secret(secret)?;
 
     monitor.running.store(true, Relaxed);
     monitor.stop.store(false, Relaxed);
@@ -416,12 +414,6 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                 running.store(false, Relaxed);
                 break;
             }
-
-            // Re-resolve secret each cycle so key changes take effect
-            let key = match resolve_secret(None) {
-                Ok(k) => k,
-                Err(_) => continue,
-            };
 
             let path = global_profile_path();
             let mut state = match load_profiles(&path) {
