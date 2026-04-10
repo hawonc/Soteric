@@ -53,3 +53,83 @@ pub struct ProfileStore {
     #[serde(default)]
     pub active_process: Option<String>,
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_profile_state_empty() {
+        let state = ProfileState::empty();
+        assert!(state.profiles.is_empty());
+        assert_eq!(state.active_profile, None);
+        assert!(state.process_to_profile.is_empty());
+        assert_eq!(state.active_process, None);
+    }
+
+    #[test]
+    fn test_profile_creation() {
+        let profile = Profile {
+            root: "/home/user".to_string(),
+            files: vec!["/home/user/secret.txt".to_string()],
+            created_with: Some("explicit files".to_string()),
+        };
+        assert_eq!(profile.root, "/home/user");
+        assert_eq!(profile.files.len(), 1);
+    }
+
+    #[test]
+    fn test_profile_state_with_data() {
+        let mut state = ProfileState::empty();
+        let mut profile = Profile {
+            root: "/home/user".to_string(),
+            files: vec![],
+            created_with: None,
+        };
+        profile.files.push("/home/user/secret.txt".to_string());
+
+        state.profiles.insert("test-profile".to_string(), profile);
+        state.active_profile = Some("test-profile".to_string());
+
+        assert!(state.profiles.contains_key("test-profile"));
+        assert_eq!(state.active_profile, Some("test-profile".to_string()));
+    }
+
+    #[test]
+    fn test_profile_state_process_mapping() {
+        let mut state = ProfileState::empty();
+        state
+            .process_to_profile
+            .insert("codex".to_string(), "secrets".to_string());
+        state
+            .process_to_profile
+            .insert("claude".to_string(), "secrets".to_string());
+
+        assert_eq!(state.process_to_profile.len(), 2);
+        assert_eq!(
+            state.process_to_profile.get("codex"),
+            Some(&"secrets".to_string())
+        );
+    }
+
+    #[test]
+    fn test_stored_profile_serialization() {
+        let profile = Profile {
+            root: "/test".to_string(),
+            files: vec!["file1.txt".to_string()],
+            created_with: Some("globs".to_string()),
+        };
+
+        let stored = StoredProfile::Detailed(profile);
+        let json = serde_json::to_string(&stored).unwrap();
+        let deserialized: StoredProfile = serde_json::from_str(&json).unwrap();
+
+        match deserialized {
+            StoredProfile::Detailed(p) => {
+                assert_eq!(p.root, "/test");
+                assert_eq!(p.files.len(), 1);
+            }
+            _ => panic!("Expected Detailed variant"),
+        }
+    }
+}

@@ -190,6 +190,8 @@ Run tests:
 cargo test
 ```
 
+See [TESTING.md](TESTING.md) for detailed testing documentation and how to write new tests.
+
 Run lints:
 
 ```bash

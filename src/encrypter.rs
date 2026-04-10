@@ -88,3 +88,117 @@ impl Encrypter {
         normalized
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+    use tempfile::TempDir;
+
+    #[test]
+    fn test_encrypt_decrypt_roundtrip() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.txt");
+        let original_content = "secret data";
+        fs::write(&test_file, original_content).unwrap();
+
+        let file_path = test_file.to_str().unwrap().to_string();
+        let key = "my-secure-key";
+
+        // Encrypt
+        Encrypter::encrypt(&[file_path.clone()], key).unwrap();
+        let encrypted_content = fs::read(&test_file).unwrap();
+        assert_ne!(encrypted_content, original_content.as_bytes());
+
+        // Decrypt
+        Encrypter::decrypt(&[file_path], key).unwrap();
+        let decrypted_content = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(decrypted_content, original_content);
+    }
+
+    #[test]
+    fn test_decrypt_with_wrong_key_fails() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("test.txt");
+        fs::write(&test_file, "secret data").unwrap();
+
+        let file_path = test_file.to_str().unwrap().to_string();
+
+        // Encrypt with one key
+        Encrypter::encrypt(&[file_path.clone()], "key1").unwrap();
+
+        // Try to decrypt with different key
+        let result = Encrypter::decrypt(&[file_path], "key2");
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_encrypt_empty_file() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("empty.txt");
+        fs::write(&test_file, "").unwrap();
+
+        let file_path = test_file.to_str().unwrap().to_string();
+        let key = "test-key";
+
+        Encrypter::encrypt(&[file_path.clone()], key).unwrap();
+        Encrypter::decrypt(&[file_path], key).unwrap();
+        let content = fs::read_to_string(&test_file).unwrap();
+        assert_eq!(content, "");
+    }
+
+    #[test]
+    fn test_encrypt_multiple_files() {
+        let temp_dir = TempDir::new().unwrap();
+        let file1 = temp_dir.path().join("file1.txt");
+        let file2 = temp_dir.path().join("file2.txt");
+        fs::write(&file1, "data1").unwrap();
+        fs::write(&file2, "data2").unwrap();
+
+        let paths = vec![
+            file1.to_str().unwrap().to_string(),
+            file2.to_str().unwrap().to_string(),
+        ];
+        let key = "test-key";
+
+        Encrypter::encrypt(&paths, key).unwrap();
+        Encrypter::decrypt(&paths, key).unwrap();
+
+        assert_eq!(fs::read_to_string(&file1).unwrap(), "data1");
+        assert_eq!(fs::read_to_string(&file2).unwrap(), "data2");
+    }
+
+    #[test]
+    fn test_normalize_key_consistency() {
+        let key = "test-password";
+        let salt = [1u8; 16];
+
+        let result1 = Encrypter::normalize_key(key, &salt);
+        let result2 = Encrypter::normalize_key(key, &salt);
+
+        assert_eq!(result1, result2);
+    }
+
+    #[test]
+    fn test_normalize_key_different_salts() {
+        let key = "test-password";
+        let salt1 = [1u8; 16];
+        let salt2 = [2u8; 16];
+
+        let result1 = Encrypter::normalize_key(key, &salt1);
+        let result2 = Encrypter::normalize_key(key, &salt2);
+
+        assert_ne!(result1, result2);
+    }
+
+    #[test]
+    fn test_decrypt_corrupted_file_fails() {
+        let temp_dir = TempDir::new().unwrap();
+        let test_file = temp_dir.path().join("corrupted.txt");
+        fs::write(&test_file, "too short").unwrap();
+
+        let file_path = test_file.to_str().unwrap().to_string();
+        let result = Encrypter::decrypt(&[file_path], "any-key");
+        assert!(result.is_err());
+    }
+}

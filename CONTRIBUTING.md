@@ -59,6 +59,7 @@ Thank you for your interest in contributing to Soteric! We welcome contributions
   cargo test
   ```
 - Test on macOS if your changes touch biometric authentication
+- See [TESTING.md](TESTING.md) for detailed testing documentation
 
 ## Submitting Changes
 
