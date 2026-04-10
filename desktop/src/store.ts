@@ -234,8 +234,9 @@ export function useAppState() {
 
   async function removeMapping(process: string) {
     try {
-      await invoke("delete_mapping", { process });
+      await invoke("delete_mapping", { process, secret: secret || null });
       await loadMappings();
+      await loadProfiles();
       addActivity(`Mapping removed: ${process}`);
     } catch (e) {
       addActivity(`Error: failed to remove mapping — ${e}`);

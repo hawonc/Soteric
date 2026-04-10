@@ -5,8 +5,10 @@ use soteric::profiles::{
 };
 use soteric::process_scan::scan_agent_processes;
 use chrono::Timelike;
+use std::collections::HashSet;
 use std::path::PathBuf;
-use tauri::{AppHandle, Emitter, State};
+use tauri::{AppHandle, Emitter, Manager, State};
+use tauri_plugin_notification::NotificationExt;
 
 fn global_profile_path() -> PathBuf {
     if let Some(data) = dirs::data_dir() {
@@ -329,12 +331,27 @@ fn set_mapping(process: String, profile: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-fn delete_mapping(process: String) -> Result<(), String> {
+fn delete_mapping(process: String, secret: Option<String>) -> Result<(), String> {
     let path = global_profile_path();
     let mut state = load_profiles(&path).map_err(|e| e.to_string())?;
 
-    if state.process_to_profile.remove(&process).is_none() {
-        return Err(format!("No mapping found for process '{}'", process));
+    let profile_name = state.process_to_profile.remove(&process)
+        .ok_or_else(|| format!("No mapping found for process '{}'", process))?;
+
+    // If this mapping's process was the active_process, deactivate + decrypt
+    if state.active_process.as_deref() == Some(&process) {
+        if let Some(profile) = state.profiles.get_mut(&profile_name) {
+            if profile.encrypted {
+                let key = resolve_secret(secret)?;
+                Encrypter::decrypt(&profile.files, &key).map_err(|e| e.to_string())?;
+                profile.encrypted = false;
+            }
+        }
+        if state.active_profile.as_deref() == Some(&profile_name) {
+            soteric::profiles::deactivate_profile(&profile_name, &mut state)
+                .map_err(|e| e.to_string())?;
+        }
+        state.active_process = None;
     }
 
     save_profiles(&path, &state).map_err(|e| e.to_string())?;
@@ -379,7 +396,11 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
     let stop = monitor.stop.clone();
     let running = monitor.running.clone();
 
+    // Track processes that the user manually decrypted — don't re-encrypt
+    // until the process disappears and comes back (new session).
     std::thread::spawn(move || {
+        let mut user_dismissed: HashSet<String> = HashSet::new();
+
         loop {
             std::thread::sleep(std::time::Duration::from_secs(5));
 
@@ -431,7 +452,6 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                     new_process = Some(p.name.clone());
                     break;
                 }
-                // Also check if any mapping key appears as a binary name in the command
                 let cmd_lower = p.command.to_lowercase();
                 for mapped_proc in state.process_to_profile.keys() {
                     let mapped_lower = mapped_proc.to_lowercase();
@@ -447,20 +467,51 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                 if new_process.is_some() { break; }
             }
 
+            // Clean up dismissed set: if a process disappeared, remove it
+            // so next time it appears it will trigger again (new session).
+            let detected_names: HashSet<String> = processes.iter()
+                .map(|p| p.name.clone())
+                .collect();
+            user_dismissed.retain(|name| {
+                // Keep in dismissed only if the process is still running
+                detected_names.contains(name) || processes.iter().any(|p| {
+                    p.command.to_lowercase().contains(&name.to_lowercase())
+                })
+            });
+
+            // Skip if user manually decrypted this process's profile
+            if let Some(ref np) = new_process {
+                if user_dismissed.contains(np) {
+                    // Process still running but user dismissed — don't re-encrypt
+                    continue;
+                }
+            }
+
             if new_process == state.active_process {
+                // Check if user manually decrypted the active profile
+                if let Some(ap) = state.active_process.clone() {
+                    if let Some(profile_name) = state.process_to_profile.get(&ap).cloned() {
+                        if let Some(profile) = state.profiles.get(&profile_name) {
+                            if !profile.encrypted {
+                                // User manually decrypted — remember this and stop tracking
+                                user_dismissed.insert(ap.clone());
+                                state.active_process = None;
+                                if state.active_profile.as_deref() == Some(&profile_name) {
+                                    let _ = soteric::profiles::deactivate_profile(&profile_name, &mut state);
+                                }
+                                let _ = save_profiles(&path, &state);
+                                let _ = app.emit("monitor-activity", MonitorActivityEvent {
+                                    event: format!("User decrypted '{}' manually — monitor will not re-encrypt until '{}' restarts", profile_name, ap),
+                                    time: time.clone(),
+                                });
+                            }
+                        }
+                    }
+                }
                 continue;
             }
 
-            // Log what the monitor is about to do
-            if new_process.is_some() || state.active_process.is_some() {
-                let _ = app.emit("monitor-activity", MonitorActivityEvent {
-                    event: format!(
-                        "Monitor state change: active_process={:?} → new_process={:?}",
-                        state.active_process, new_process
-                    ),
-                    time: time.clone(),
-                });
-            }
+            // --- State change: deactivate old, activate new ---
 
             // Deactivate current if needed
             if let Some(current) = state.active_process.clone() {
@@ -481,9 +532,15 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                         Err(e) => format!("Error auto-deactivating '{}': {}", profile_name, e),
                     };
                     let _ = app.emit("monitor-activity", MonitorActivityEvent {
-                        event: msg,
+                        event: msg.clone(),
                         time: time.clone(),
                     });
+                    // Send OS notification
+                    let _ = app.notification()
+                        .builder()
+                        .title("Soteric")
+                        .body(&msg)
+                        .show();
                 }
             }
             state.active_process = None;
@@ -505,13 +562,19 @@ fn start_monitor(secret: Option<String>, monitor: State<MonitorState>, app: AppH
                         Ok(())
                     })();
                     let msg = match result {
-                        Ok(()) => format!("Auto-activated profile '{}' (detected '{}')", profile_name, new_proc),
+                        Ok(()) => format!("Auto-activated profile '{}' — files encrypted (detected '{}')", profile_name, new_proc),
                         Err(e) => format!("Error auto-activating '{}': {}", profile_name, e),
                     };
                     let _ = app.emit("monitor-activity", MonitorActivityEvent {
-                        event: msg,
+                        event: msg.clone(),
                         time: time.clone(),
                     });
+                    // Send OS notification
+                    let _ = app.notification()
+                        .builder()
+                        .title("Soteric")
+                        .body(&msg)
+                        .show();
                 }
             }
         }
@@ -539,6 +602,7 @@ fn is_monitor_running(monitor: State<MonitorState>) -> Result<bool, String> {
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_notification::init())
         .manage(MonitorState {
             running: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),
             stop: std::sync::Arc::new(std::sync::atomic::AtomicBool::new(false)),

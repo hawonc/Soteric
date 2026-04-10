@@ -88,7 +88,7 @@ export default function Monitor({ processes, activeProfile, lastScan, monitorRun
       </Card>
 
       {/* Protection status */}
-      {isDetected && activeProfile && (
+      {isDetected && activeProfile && activeProfile.encrypted && (
         <Card className="border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20">
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-amber-700 dark:text-amber-400">

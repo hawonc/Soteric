@@ -26,4 +26,5 @@ soteric = { path = "../.." }
 dirs = "6.0.0"
 anyhow = "1.0.102"
 chrono = "0.4.44"
+tauri-plugin-notification = "2.3.3"
 
