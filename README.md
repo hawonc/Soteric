@@ -1,5 +1,7 @@
 # Soteric
 
+[![Tests](https://github.com/hawonc/Sotericactions/workflows/rust.yml/badge.svg)](https://github.com/hawonc/Soteric/actions/workflows/rust.yml)
+
 Soteric is a Rust CLI tool that protects sensitive files from AI coding assistants (like GitHub Copilot or Claude) by automatically encrypting them when these tools are detected running on your system.
 
 ## Current Model
